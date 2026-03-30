@@ -1,0 +1,6 @@
+model=gcn
+train_acc=0.736395
+val_acc=0.722903
+test_acc=0.748653
+roc_auc=0.825059
+pr_auc=0.586497
