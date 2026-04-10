@@ -1,0 +1,9 @@
+model=dgi
+train_acc=0.741951
+val_acc=0.727317
+test_acc=0.764821
+precision=0.555556
+recall=0.275591
+f1=0.368421
+roc_auc=0.731045
+pr_auc=0.509839

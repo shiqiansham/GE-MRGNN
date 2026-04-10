@@ -35,21 +35,21 @@ GE-MRGNN 网络安全团伙检测系统
 选项:
     --help              显示此帮助信息
     --run_demo          运行单个模型演示
-    --run_comparison    运行对比实验 (GCN vs GAT vs RGCN vs GE-MRGNN)
-    --model MODEL       指定模型类型: gcn, gat, rgcn, rgcn_group (默认: rgcn_group)
+    --run_comparison    运行对比实验 (全部模型)
+    --run_ablation      运行消融实验
+    --model MODEL       模型类型: gcn, gat, rgcn, rgcn_group, han, dgi, lpa (默认: rgcn_group)
     --epochs N          训练轮数 (默认: 100)
     --hidden N          隐藏层维度 (默认: 64)
     --seed N            随机种子 (默认: 42)
+    --train_ratio F     训练集比例 (默认: 0.6)
+    --val_ratio F       验证集比例 (默认: 0.2)
+    --amp               启用混合精度训练 (需 CUDA)
 
 示例:
-    # 使用默认参数训练 GE-MRGNN
     python main.py --run_demo
-
-    # 训练 GCN 基线模型
-    python main.py --run_demo --model gcn --epochs 50
-
-    # 运行完整对比实验
+    python main.py --run_demo --model han --epochs 50
     python main.py --run_comparison
+    python main.py --run_ablation
 """)
 
 
@@ -90,6 +90,8 @@ def run_comparison_experiments(epochs=100, hidden=64, seed=42):
         ('gcn', 'GCN (单关系图卷积网络)'),
         ('gat', 'GAT (图注意力网络)'),
         ('rgcn', 'RGCN (多关系图卷积网络)'),
+        ('han', 'HAN (异质注意力网络)'),
+        ('dgi', 'DGI (深度图信息最大化)'),
         ('rgcn_group', 'GE-MRGNN (群组增强的多关系图神经网络)'),
         ('lpa', 'LPA (标签传播算法)')
     ]
@@ -154,6 +156,8 @@ def main():
     
     if '--run_comparison' in args:
         run_comparison_experiments(epochs=epochs, hidden=hidden, seed=seed)
+    elif '--run_ablation' in args:
+        subprocess.run([sys.executable, 'run_ablation.py'], cwd=Path(__file__).parent)
     elif '--run_demo' in args:
         run_single_model(model_type=model_type, epochs=epochs, hidden=hidden, seed=seed)
     else:

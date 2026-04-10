@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GE-MRGNN 网络安全团伙检测系统</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>if(typeof Vue==='undefined')document.write('<script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.prod.js"><\/script>')</script>
+<script src="https://unpkg.com/echarts@5/dist/echarts.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1724; color:#e0e6ed; }
+.header { background:linear-gradient(135deg,#1a2332,#2d3a4a); padding:16px 24px; display:flex; align-items:center; gap:16px; border-bottom:1px solid #2d3a4a; }
+.header h1 { font-size:20px; color:#4fc3f7; }
+.header .status { margin-left:auto; display:flex; gap:12px; font-size:13px; }
+.header .status .badge { background:#1b5e20; color:#a5d6a7; padding:3px 10px; border-radius:12px; }
+.header .status .badge.warn { background:#e65100; color:#ffcc80; }
+.main { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:16px; padding:16px; max-height:calc(100vh - 64px); overflow-y:auto; }
+.card { background:#1a2332; border:1px solid #2d3a4a; border-radius:8px; overflow:hidden; }
+.card-header { padding:12px 16px; border-bottom:1px solid #2d3a4a; font-size:14px; font-weight:600; color:#90caf9; display:flex; align-items:center; gap:8px; }
+.card-body { padding:16px; }
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.stat-item { background:#0f1724; border-radius:8px; padding:16px; text-align:center; }
+.stat-item .value { font-size:28px; font-weight:700; color:#4fc3f7; }
+.stat-item .label { font-size:12px; color:#78909c; margin-top:4px; }
+.stat-item.danger .value { color:#ef5350; }
+.stat-item.warning .value { color:#ffb74d; }
+.stat-item.success .value { color:#66bb6a; }
+.chart-container { width:100%; height:320px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:#0f1724; padding:8px 12px; text-align:left; color:#90caf9; position:sticky; top:0; }
+tbody td { padding:8px 12px; border-bottom:1px solid #1e2d3d; }
+tbody tr:hover { background:#1e2d3d; }
+.prob-bar { height:6px; border-radius:3px; background:#1e2d3d; }
+.prob-bar .fill { height:100%; border-radius:3px; }
+.tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; }
+.tag.mal { background:#b71c1c; color:#ef9a9a; }
+.tag.safe { background:#1b5e20; color:#a5d6a7; }
+.gang-card { background:#0f1724; border:1px solid #2d3a4a; border-radius:6px; padding:12px; margin-bottom:8px; cursor:pointer; transition:border-color .2s; }
+.gang-card:hover { border-color:#4fc3f7; }
+.gang-card .title { font-size:14px; font-weight:600; color:#e0e6ed; }
+.gang-card .meta { font-size:12px; color:#78909c; margin-top:4px; }
+.node-list { max-height:400px; overflow-y:auto; }
+.btn { padding:6px 14px; border:1px solid #4fc3f7; background:transparent; color:#4fc3f7; border-radius:4px; cursor:pointer; font-size:12px; }
+.btn:hover { background:#4fc3f7; color:#0f1724; }
+.full-width { grid-column:1/-1; }
+#graph-container { width:100%; height:400px; background:#0a0f18; border-radius:4px; position:relative; }
+#graph-canvas { width:100%; height:100%; }
+.loading { text-align:center; padding:40px; color:#78909c; }
+.metrics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
+.metric-card { background:#0f1724; border-radius:6px; padding:12px; }
+.metric-card .model-name { font-size:13px; font-weight:600; color:#90caf9; margin-bottom:6px; }
+.metric-card .metric-row { display:flex; justify-content:space-between; font-size:12px; padding:2px 0; }
+.metric-card .metric-row .val { color:#4fc3f7; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1>GE-MRGNN 网络安全团伙检测系统</h1>
+    <div class="status">
+      <span class="badge" :class="{warn:!loaded}">{{ loaded ? '模型已加载' : '未连接' }}</span>
+      <span class="badge" v-if="loaded">节点 {{ stats.num_nodes }}</span>
+      <span class="badge" v-if="loaded">边 {{ stats.num_edges }}</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- 统计概览 -->
+    <div class="card full-width">
+      <div class="card-header">概览统计</div>
+      <div class="card-body">
+        <div class="stats-grid">
+          <div class="stat-item"><div class="value">{{ stats.num_nodes || 0 }}</div><div class="label">总节点数</div></div>
+          <div class="stat-item"><div class="value">{{ stats.num_edges || 0 }}</div><div class="label">总边数</div></div>
+          <div class="stat-item danger"><div class="value">{{ stats.num_malicious || 0 }}</div><div class="label">恶意节点</div></div>
+          <div class="stat-item warning"><div class="value">{{ stats.num_gangs || 0 }}</div><div class="label">团伙数量</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 恶意节点列表 -->
+    <div class="card">
+      <div class="card-header">
+        恶意节点告警
+        <span style="margin-left:auto;font-size:12px;color:#78909c">Top {{ nodes.length }}</span>
+      </div>
+      <div class="card-body node-list">
+        <table>
+          <thead><tr><th>节点ID</th><th>IP</th><th>恶意概率</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr v-for="n in nodes" :key="n.node_id">
+              <td>{{ n.node_id }}</td>
+              <td>{{ n.ip }}</td>
+              <td>
+                <div class="prob-bar"><div class="fill" :style="{width: (n.probability*100)+'%', background: n.probability>0.7?'#ef5350':n.probability>0.5?'#ffb74d':'#66bb6a'}"></div></div>
+                {{ (n.probability*100).toFixed(1) }}%
+              </td>
+              <td><span class="tag" :class="n.is_malicious?'mal':'safe'">{{ n.is_malicious?'恶意':'正常' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 团伙子图 -->
+    <div class="card">
+      <div class="card-header">团伙子图检测 <span style="margin-left:auto;font-size:12px;color:#78909c">共 {{ gangs.length }} 个</span></div>
+      <div class="card-body node-list">
+        <div v-for="(g,i) in gangs" :key="i" class="gang-card" @click="showGang(g)">
+          <div class="title">团伙 #{{ i+1 }} ({{ g.size }} 节点, {{ g.edges.length }} 边)</div>
+          <div class="meta">恶意节点: {{ g.num_malicious }} | 核心IP: {{ Object.values(g.node_labels||{}).slice(0,3).join(', ') }}</div>
+        </div>
+        <div v-if="gangs.length===0" class="loading">暂无团伙数据</div>
+      </div>
+    </div>
+
+    <!-- 图可视化 -->
+    <div class="card full-width">
+      <div class="card-header">团伙图谱可视化 <span v-if="selectedGang" style="margin-left:8px;font-size:12px;color:#78909c">团伙 {{ selectedGang.size }} 节点</span></div>
+      <div class="card-body">
+        <div id="graph-container">
+          <canvas id="graph-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模型对比指标 -->
+    <div class="card full-width">
+      <div class="card-header">模型评估指标对比</div>
+      <div class="card-body">
+        <div class="metrics-grid">
+          <div v-for="(m,name) in metricsData" :key="name" class="metric-card">
+            <div class="model-name">{{ name }}</div>
+            <div class="metric-row" v-for="(v,k) in m" :key="k"><span>{{ k }}</span><span class="val">{{ typeof v==='number'? v.toFixed(4):v }}</span></div>
+          </div>
+        </div>
+        <div v-if="Object.keys(metricsData).length===0" class="loading">暂无指标数据</div>
+      </div>
+    </div>
+
+    <!-- ROC/PR 曲线 -->
+    <div class="card">
+      <div class="card-header">ROC 曲线</div>
+      <div class="card-body"><div id="roc-chart" class="chart-container"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">PR 曲线</div>
+      <div class="card-body"><div id="pr-chart" class="chart-container"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+const {createApp, ref, onMounted, nextTick} = Vue;
+
+createApp({
+  setup() {
+    const loaded = ref(false);
+    const stats = ref({});
+    const nodes = ref([]);
+    const gangs = ref([]);
+    const metricsData = ref({});
+    const selectedGang = ref(null);
+
+    async function fetchJSON(url) {
+      try { const r = await fetch(API + url); return await r.json(); } catch(e) { return null; }
+    }
+
+    async function load() {
+      const s = await fetchJSON('/api/status');
+      if (s && s.loaded) {
+        loaded.value = true;
+        stats.value = s;
+        const nd = await fetchJSON('/api/nodes?page=1&page_size=100&malicious_only=true&sort_by=prob_desc');
+        if (nd) nodes.value = nd.nodes;
+        const gd = await fetchJSON('/api/gangs?top_k=20');
+        if (gd) gangs.value = gd.gangs;
+        const md = await fetchJSON('/api/metrics');
+        if (md) metricsData.value = md.metrics;
+      }
+    }
+
+    function drawGraph(gang) {
+      const canvas = document.getElementById('graph-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('graph-container');
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+
+      if (!gang || !gang.nodes || gang.nodes.length === 0) {
+        ctx.fillStyle = '#78909c';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('点击左侧团伙卡片查看图谱', W/2, H/2);
+        return;
+      }
+
+      const probs = gang.node_probs || {};
+      const labels = gang.node_labels || {};
+      const allNodes = gang.nodes.slice();
+      // 按恶意概率排序，取 Top 30 核心节点
+      allNodes.sort((a,b) => (probs[String(b)]||0) - (probs[String(a)]||0));
+      const MAX_SHOW = 30;
+      const showNodes = allNodes.slice(0, MAX_SHOW);
+      const showSet = new Set(showNodes);
+      // 只保留两端都在展示集内的边
+      const showEdges = (gang.edges||[]).filter(([s,d]) => showSet.has(s) && showSet.has(d));
+
+      // 构建邻接度（用于节点大小）
+      const deg = {};
+      showNodes.forEach(n => deg[n] = 0);
+      showEdges.forEach(([s,d]) => { deg[s]=(deg[s]||0)+1; deg[d]=(deg[d]||0)+1; });
+
+      // 力导向布局：初始化随机位置，迭代排斥+弹簧
+      const pos = {};
+      const vel = {};
+      const n = showNodes.length;
+      showNodes.forEach((id, i) => {
+        const angle = (2*Math.PI*i)/n + (Math.random()-0.5)*0.3;
+        const r = Math.min(W,H)*0.25 + Math.random()*40;
+        pos[id] = { x: W/2 + r*Math.cos(angle), y: H/2 + r*Math.sin(angle) };
+        vel[id] = { x:0, y:0 };
+      });
+      // 边集合快速查找
+      const edgeSet = new Set(showEdges.map(([s,d])=>s+','+d));
+      const linked = (a,b) => edgeSet.has(a+','+b) || edgeSet.has(b+','+a);
+      // 迭代
+      for (let iter=0; iter<120; iter++) {
+        const temp = Math.max(0.01, 1 - iter/120);
+        for (let i=0;i<n;i++) {
+          const a = showNodes[i];
+          for (let j=i+1;j<n;j++) {
+            const b = showNodes[j];
+            let dx = pos[b].x-pos[a].x, dy = pos[b].y-pos[a].y;
+            let dist = Math.sqrt(dx*dx+dy*dy)||1;
+            // 排斥力
+            const repulse = 3000/(dist*dist);
+            const fx = dx/dist*repulse, fy = dy/dist*repulse;
+            vel[a].x -= fx*temp; vel[a].y -= fy*temp;
+            vel[b].x += fx*temp; vel[b].y += fy*temp;
+            // 弹簧力（有边的节点）
+            if (linked(a,b)) {
+              const attract = (dist-80)*0.005;
+              const ax2 = dx/dist*attract, ay2 = dy/dist*attract;
+              vel[a].x += ax2*temp; vel[a].y += ay2*temp;
+              vel[b].x -= ax2*temp; vel[b].y -= ay2*temp;
+            }
+          }
+          // 向中心的引力
+          vel[a].x += (W/2-pos[a].x)*0.0005;
+          vel[a].y += (H/2-pos[a].y)*0.0005;
+        }
+        showNodes.forEach(id => {
+          pos[id].x += vel[id].x; pos[id].y += vel[id].y;
+          vel[id].x *= 0.8; vel[id].y *= 0.8;
+          // 边界约束
+          pos[id].x = Math.max(40, Math.min(W-40, pos[id].x));
+          pos[id].y = Math.max(40, Math.min(H-40, pos[id].y));
+        });
+      }
+
+      // 画边（半透明）
+      ctx.lineWidth = 0.5;
+      showEdges.forEach(([s,d]) => {
+        if (!pos[s]||!pos[d]) return;
+        ctx.strokeStyle = 'rgba(77,133,180,0.3)';
+        ctx.beginPath();
+        ctx.moveTo(pos[s].x, pos[s].y);
+        ctx.lineTo(pos[d].x, pos[d].y);
+        ctx.stroke();
+      });
+
+      // 画节点
+      showNodes.forEach(id => {
+        const p = pos[id];
+        const prob = probs[String(id)] || 0;
+        const isMal = prob > 0.5;
+        const d = deg[id]||0;
+        const radius = isMal ? Math.min(5+d*0.8, 16) : Math.min(3+d*0.4, 8);
+
+        // 发光效果（高危节点）
+        if (prob > 0.7) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius+4, 0, 2*Math.PI);
+          ctx.fillStyle = 'rgba(239,83,80,0.15)';
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, 2*Math.PI);
+        // 颜色按概率渐变
+        if (prob > 0.7) ctx.fillStyle = '#ef5350';
+        else if (prob > 0.5) ctx.fillStyle = '#ffb74d';
+        else ctx.fillStyle = '#66bb6a';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // 只标注 Top 10 或高危节点
+        if (prob > 0.6 || d >= 3) {
+          const label = labels[String(id)] || String(id);
+          const short = label.length>12 ? label.slice(0,12)+'..' : label;
+          ctx.fillStyle = '#cfd8dc';
+          ctx.font = '9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(short, p.x, p.y - radius - 3);
+        }
+      });
+
+      // 图例
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left';
+      const legendY = 20;
+      [[12,'#ef5350','高危 >70%'],[12,'#ffb74d','可疑 50-70%'],[12,'#66bb6a','正常 <50%']].forEach(([r,c,t],i) => {
+        const lx = 16, ly = legendY + i*20;
+        ctx.beginPath(); ctx.arc(lx,ly,5,0,2*Math.PI); ctx.fillStyle=c; ctx.fill();
+        ctx.fillStyle='#aaa'; ctx.fillText(t, lx+12, ly+4);
+      });
+      if (allNodes.length > MAX_SHOW) {
+        ctx.fillStyle='#78909c'; ctx.font='11px sans-serif'; ctx.textAlign='right';
+        ctx.fillText(`显示 Top ${MAX_SHOW}/${allNodes.length} 核心节点`, W-16, H-12);
+      }
+    }
+
+    function showGang(g) {
+      selectedGang.value = g;
+      nextTick(() => drawGraph(g));
+    }
+
+    const COLORS = ['#4fc3f7','#ef5350','#66bb6a','#ffb74d','#ab47bc','#26c6da','#ff7043'];
+    const NAME_MAP = {'ge-mrgcn':'GE-MRGNN','gcn':'GCN','rgcn':'RGCN','han':'HAN','dgi':'DGI','gat':'GAT'};
+
+    function drawROC(curves) {
+      const dom = document.getElementById('roc-chart');
+      if (!dom || typeof echarts === 'undefined') return;
+      const chart = echarts.init(dom, 'dark');
+      const series = [];
+      let i = 0;
+      for (const [name, c] of Object.entries(curves)) {
+        if (!c.roc) continue;
+        // 按 FPR 升序排序，确保曲线从左到右绘制
+        const pairs = c.roc.fpr.map((f, idx) => [f, c.roc.tpr[idx]]);
+        pairs.sort((a,b) => a[0]-b[0]);
+        const displayName = NAME_MAP[name] || name;
+        series.push({ name:displayName, type:'line', data:pairs, smooth:false, symbol:'none', lineStyle:{width:2, color:COLORS[i%COLORS.length]} });
+        i++;
+      }
+      series.push({ name:'随机基线', type:'line', data:[[0,0],[1,1]], lineStyle:{type:'dashed', color:'#555', width:1}, symbol:'none' });
+      chart.setOption({
+        backgroundColor:'transparent',
+        tooltip:{ trigger:'axis', formatter:p=>p.map(s=>s.seriesName+': TPR='+s.data[1].toFixed(3)).join('<br>') },
+        legend:{ bottom:0, textStyle:{color:'#bbb',fontSize:11}, itemWidth:16, itemHeight:8 },
+        grid:{ left:55, right:15, top:30, bottom:45 },
+        xAxis:{ name:'假阳性率 (FPR)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
+        yAxis:{ name:'真阳性率 (TPR)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
+        series
+      });
+    }
+
+    function drawPR(curves) {
+      const dom = document.getElementById('pr-chart');
+      if (!dom || typeof echarts === 'undefined') return;
+      const chart = echarts.init(dom, 'dark');
+      const series = [];
+      let i = 0;
+      for (const [name, c] of Object.entries(curves)) {
+        if (!c.pr) continue;
+        // 按 Recall 升序排序
+        const pairs = c.pr.recall.map((r, idx) => [r, c.pr.precision[idx]]);
+        pairs.sort((a,b) => a[0]-b[0]);
+        const displayName = NAME_MAP[name] || name;
+        series.push({ name:displayName, type:'line', data:pairs, smooth:false, symbol:'none', lineStyle:{width:2, color:COLORS[i%COLORS.length]} });
+        i++;
+      }
+      chart.setOption({
+        backgroundColor:'transparent',
+        tooltip:{ trigger:'axis', formatter:p=>p.map(s=>s.seriesName+': P='+s.data[1].toFixed(3)).join('<br>') },
+        legend:{ bottom:0, textStyle:{color:'#bbb',fontSize:11}, itemWidth:16, itemHeight:8 },
+        grid:{ left:55, right:15, top:30, bottom:45 },
+        xAxis:{ name:'召回率 (Recall)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
+        yAxis:{ name:'精确率 (Precision)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
+        series
+      });
+    }
+
+    onMounted(async () => {
+      await load();
+      // 加载曲线数据
+      const cd = await fetchJSON('/api/curves');
+      if (cd && cd.curves) {
+        nextTick(() => { drawROC(cd.curves); drawPR(cd.curves); });
+      }
+      nextTick(() => drawGraph(null));
+      setInterval(load, 30000);
+    });
+
+    return { loaded, stats, nodes, gangs, metricsData, selectedGang, showGang };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -54,3 +54,18 @@ edge_weight_path = base_dir / 'edge_weight.pt'
 if edge_weight_path.exists():
     edge_weight = torch.load(edge_weight_path)
     print("边权重形状:", edge_weight.shape)
+
+# 图谱语义信息
+graph_info_path = base_dir / 'graph_info.json'
+if graph_info_path.exists():
+    import json
+    info = json.loads(graph_info_path.read_text(encoding='utf-8'))
+    print("\n===== 多关系语义图谱信息 =====")
+    print(f"  关系类型数: {info.get('num_relations', '未知')}")
+    if 'edge_distribution' in info:
+        for name, cnt in info['edge_distribution'].items():
+            print(f"    {name}: {cnt} 条边")
+    if 'feature_names' in info:
+        print(f"  特征维度: {len(info['feature_names'])}")
+        for i, fn in enumerate(info['feature_names']):
+            print(f"    [{i:2d}] {fn}")

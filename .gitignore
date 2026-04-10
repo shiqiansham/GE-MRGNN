@@ -32,3 +32,8 @@ Thumbs.db
 
 # 中期报告（不上传）
 中期报告.txt
+
+# 临时/备份目录
+backup_2rel/
+inference_output/
+graph_info.txt

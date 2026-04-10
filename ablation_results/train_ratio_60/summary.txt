@@ -1,0 +1,9 @@
+model=rgcn_group
+train_acc=0.805360
+val_acc=0.798431
+test_acc=0.811367
+precision=0.583902
+recall=0.842520
+f1=0.689766
+roc_auc=0.899924
+pr_auc=0.739468

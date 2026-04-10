@@ -4,5 +4,13 @@
 torch>=1.9.0
 numpy>=1.19.0
 
-# 数据处理 (可选，用于pcap解析)
-# scapy>=2.4.0  # 如果需要更完整的pcap解析
+# 指标计算
+scikit-learn>=0.24.0
+
+# API 服务 (原型系统)
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-multipart>=0.0.5
+
+# 数据处理 (可选)
+# scapy>=2.4.0  # pcap 解析

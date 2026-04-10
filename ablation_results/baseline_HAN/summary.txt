@@ -1,0 +1,9 @@
+model=han
+train_acc=0.756823
+val_acc=0.738597
+test_acc=0.752572
+precision=0.501625
+recall=0.911417
+f1=0.647100
+roc_auc=0.852912
+pr_auc=0.605603

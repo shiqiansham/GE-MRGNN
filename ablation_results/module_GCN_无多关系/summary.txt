@@ -1,0 +1,9 @@
+model=gcn
+train_acc=0.739173
+val_acc=0.704267
+test_acc=0.739343
+precision=0.484085
+recall=0.718504
+f1=0.578447
+roc_auc=0.825090
+pr_auc=0.583206
