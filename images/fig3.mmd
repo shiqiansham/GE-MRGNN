@@ -1,0 +1,27 @@
+graph TD 
+    Center((目标节点 v_i)) 
+    N1((邻居 v_1)) -- "关系 r_1 (如: 转发)" --> Center 
+    N2((邻居 v_2)) -- "关系 r_1 (如: 转发)" --> Center 
+    N3((邻居 v_3)) -- "关系 r_2 (如: 关注)" --> Center 
+    N4((邻居 v_4)) -- "关系 r_3 (如: 同源IP)" --> Center 
+
+    subgraph "R-GCN 聚合计算" 
+        W1[权重矩阵 W_{r_1}] 
+        W2[权重矩阵 W_{r_2}] 
+        W3[权重矩阵 W_{r_3}] 
+        W0[自环权重 W_0] 
+    end 
+
+    N1 -.-> W1 
+    N2 -.-> W1 
+    N3 -.-> W2 
+    N4 -.-> W3 
+    Center -.-> W0 
+
+    W1 --> Sum[特征求和与归一化] 
+    W2 --> Sum 
+    W3 --> Sum 
+    W0 --> Sum 
+
+    Sum --> ReLU[ReLU 激活] 
+    ReLU --> Out((更新后节点 v_i))

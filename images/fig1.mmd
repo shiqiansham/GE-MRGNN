@@ -1,0 +1,32 @@
+flowchart TD 
+    subgraph "前端展示层" 
+        A1["Vue.js 可视化大盘"] 
+        A2["ECharts 团伙图谱动态展示"] 
+        A3["多模型评估指标看板"] 
+    end 
+
+    subgraph "服务接口层" 
+        B1["FastAPI 微服务"] 
+        B2["RESTful API 路由分发"] 
+        B3["模型驻留与状态管理"] 
+    end 
+
+    subgraph "核心算法层" 
+        C1["GE-MRGNN 检测引擎"] 
+        C2["多关系图卷积模块 R-GCN"] 
+        C3["群组增强模块 GroupEnhance"] 
+        C4["BCE 损失与自适应优化"] 
+    end 
+
+    subgraph "数据处理层" 
+        D1["多源异构安全数据"] 
+        D2["特征工程与映射"] 
+        D3["PyTorch Tensor 转换"] 
+    end 
+
+    A1 --- B1 
+    A2 --- B1 
+    A3 --- B1 
+    B2 --- C1 
+    C1 --- D2 
+    D2 --- D1

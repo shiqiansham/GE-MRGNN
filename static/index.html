@@ -8,399 +8,612 @@
 <script>if(typeof Vue==='undefined')document.write('<script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/3.2.31/vue.global.prod.js"><\/script>')</script>
 <script src="https://unpkg.com/echarts@5/dist/echarts.min.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1724; color:#e0e6ed; }
-.header { background:linear-gradient(135deg,#1a2332,#2d3a4a); padding:16px 24px; display:flex; align-items:center; gap:16px; border-bottom:1px solid #2d3a4a; }
-.header h1 { font-size:20px; color:#4fc3f7; }
-.header .status { margin-left:auto; display:flex; gap:12px; font-size:13px; }
-.header .status .badge { background:#1b5e20; color:#a5d6a7; padding:3px 10px; border-radius:12px; }
-.header .status .badge.warn { background:#e65100; color:#ffcc80; }
-.main { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:16px; padding:16px; max-height:calc(100vh - 64px); overflow-y:auto; }
-.card { background:#1a2332; border:1px solid #2d3a4a; border-radius:8px; overflow:hidden; }
-.card-header { padding:12px 16px; border-bottom:1px solid #2d3a4a; font-size:14px; font-weight:600; color:#90caf9; display:flex; align-items:center; gap:8px; }
-.card-body { padding:16px; }
-.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-.stat-item { background:#0f1724; border-radius:8px; padding:16px; text-align:center; }
-.stat-item .value { font-size:28px; font-weight:700; color:#4fc3f7; }
-.stat-item .label { font-size:12px; color:#78909c; margin-top:4px; }
-.stat-item.danger .value { color:#ef5350; }
-.stat-item.warning .value { color:#ffb74d; }
-.stat-item.success .value { color:#66bb6a; }
-.chart-container { width:100%; height:320px; }
-table { width:100%; border-collapse:collapse; font-size:13px; }
-thead th { background:#0f1724; padding:8px 12px; text-align:left; color:#90caf9; position:sticky; top:0; }
-tbody td { padding:8px 12px; border-bottom:1px solid #1e2d3d; }
-tbody tr:hover { background:#1e2d3d; }
-.prob-bar { height:6px; border-radius:3px; background:#1e2d3d; }
-.prob-bar .fill { height:100%; border-radius:3px; }
-.tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; }
-.tag.mal { background:#b71c1c; color:#ef9a9a; }
-.tag.safe { background:#1b5e20; color:#a5d6a7; }
-.gang-card { background:#0f1724; border:1px solid #2d3a4a; border-radius:6px; padding:12px; margin-bottom:8px; cursor:pointer; transition:border-color .2s; }
-.gang-card:hover { border-color:#4fc3f7; }
-.gang-card .title { font-size:14px; font-weight:600; color:#e0e6ed; }
-.gang-card .meta { font-size:12px; color:#78909c; margin-top:4px; }
-.node-list { max-height:400px; overflow-y:auto; }
-.btn { padding:6px 14px; border:1px solid #4fc3f7; background:transparent; color:#4fc3f7; border-radius:4px; cursor:pointer; font-size:12px; }
-.btn:hover { background:#4fc3f7; color:#0f1724; }
-.full-width { grid-column:1/-1; }
-#graph-container { width:100%; height:400px; background:#0a0f18; border-radius:4px; position:relative; }
-#graph-canvas { width:100%; height:100%; }
-.loading { text-align:center; padding:40px; color:#78909c; }
-.metrics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
-.metric-card { background:#0f1724; border-radius:6px; padding:12px; }
-.metric-card .model-name { font-size:13px; font-weight:600; color:#90caf9; margin-bottom:6px; }
-.metric-card .metric-row { display:flex; justify-content:space-between; font-size:12px; padding:2px 0; }
-.metric-card .metric-row .val { color:#4fc3f7; }
+:root {
+  --bg-root: #080c14; --bg-sidebar: #0c1220; --bg-card: #111827;
+  --bg-card-hover: #162032; --bg-input: #0d1525; --bg-table-head: #0a1020;
+  --border: #1e2d42; --border-light: #283a54;
+  --text-primary: #e8edf5; --text-secondary: #8899aa; --text-muted: #556677;
+  --accent: #3b82f6; --accent-light: #60a5fa; --accent-dim: rgba(59,130,246,.12);
+  --danger: #ef4444; --danger-dim: rgba(239,68,68,.12);
+  --warning: #f59e0b; --warning-dim: rgba(245,158,11,.12);
+  --success: #10b981; --success-dim: rgba(16,185,129,.12);
+  --purple: #8b5cf6;
+  --sidebar-w: 220px; --header-h: 56px;
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-root);color:var(--text-primary);font-size:13px;line-height:1.5}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a3a50;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3a4a60}
+
+/* ===== Layout ===== */
+.layout{display:flex;height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--bg-sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:10}
+.sidebar-brand{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-brand svg{flex-shrink:0}
+.sidebar-brand .title{font-size:13px;font-weight:700;color:var(--accent-light);line-height:1.3}
+.sidebar-brand .sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-group{margin-bottom:16px}
+.nav-group-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:0 10px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-secondary);transition:all .15s;font-size:13px;position:relative}
+.nav-item:hover{background:var(--accent-dim);color:var(--text-primary)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent-light);font-weight:600}
+.nav-item.active::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--accent)}
+.nav-item svg{flex-shrink:0;opacity:.6}
+.nav-item.active svg{opacity:1}
+.nav-badge{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600}
+.nav-badge.danger{background:var(--danger-dim);color:var(--danger)}
+.nav-badge.warn{background:var(--warning-dim);color:var(--warning)}
+
+.main-area{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:var(--header-h);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;background:var(--bg-sidebar)}
+.topbar .page-title{font-size:16px;font-weight:700;color:var(--text-primary)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status-dot.on{background:var(--success);box-shadow:0 0 6px var(--success)}
+.status-dot.off{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.topbar-info{font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px}
+
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* ===== Cards ===== */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--text-secondary)}
+.card-header svg{opacity:.5}
+.card-header .extra{margin-left:auto;font-weight:400;font-size:11px;color:var(--text-muted)}
+.card-body{padding:18px}
+
+/* ===== Stats Grid ===== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:flex-start;gap:14px;box-shadow:var(--shadow);transition:border-color .2s}
+.stat-card:hover{border-color:var(--border-light)}
+.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-icon.blue{background:var(--accent-dim)}
+.stat-icon.red{background:var(--danger-dim)}
+.stat-icon.yellow{background:var(--warning-dim)}
+.stat-icon.green{background:var(--success-dim)}
+.stat-info .label{font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.stat-info .value{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.5px}
+.stat-info .value.blue{color:var(--accent-light)}
+.stat-info .value.red{color:var(--danger)}
+.stat-info .value.yellow{color:var(--warning)}
+.stat-info .value.green{color:var(--success)}
+
+/* ===== Table ===== */
+.table-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:6px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;flex:1;max-width:300px}
+.search-box svg{opacity:.4;flex-shrink:0}
+.search-box input{background:none;border:none;outline:none;color:var(--text-primary);font-size:12px;width:100%}
+.search-box input::placeholder{color:var(--text-muted)}
+.filter-btn{padding:6px 12px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;transition:all .15s;display:flex;align-items:center;gap:5px}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent-light);background:var(--accent-dim)}
+
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead th{background:var(--bg-table-head);padding:10px 14px;text-align:left;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+.data-table tbody td{padding:10px 14px;border-bottom:1px solid rgba(30,45,66,.5);font-size:12px;color:var(--text-secondary)}
+.data-table tbody tr{transition:background .1s;cursor:pointer}
+.data-table tbody tr:hover{background:var(--bg-card-hover)}
+.data-table tbody tr.selected{background:var(--accent-dim)}
+
+.prob-cell{display:flex;align-items:center;gap:8px;min-width:140px}
+.prob-bar{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.prob-bar .fill{height:100%;border-radius:3px;transition:width .3s}
+.prob-val{font-size:11px;font-weight:600;min-width:42px;text-align:right}
+
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:600;letter-spacing:.3px}
+.tag.danger{background:var(--danger-dim);color:#fca5a5}
+.tag.safe{background:var(--success-dim);color:#6ee7b7}
+.tag.warn{background:var(--warning-dim);color:#fcd34d}
+
+.pager{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:12px;color:var(--text-muted)}
+.pager-btns{display:flex;gap:4px}
+.pager-btn{padding:5px 10px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);border-radius:4px;cursor:pointer;font-size:11px}
+.pager-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent-light)}
+.pager-btn:disabled{opacity:.3;cursor:not-allowed}
+.pager-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ===== Detail Drawer ===== */
+.drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.drawer-mask.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:380px;background:var(--bg-sidebar);border-left:1px solid var(--border);z-index:101;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.drawer-header .title{font-size:15px;font-weight:700}
+.drawer-close{margin-left:auto;width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.drawer-close:hover{background:var(--danger-dim);color:var(--danger);border-color:var(--danger)}
+.drawer-body{flex:1;overflow-y:auto;padding:20px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(30,45,66,.4)}
+.detail-row .k{color:var(--text-muted);font-size:12px}
+.detail-row .v{color:var(--text-primary);font-size:12px;font-weight:600}
+
+/* ===== Gang Cards ===== */
+.gangs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.gang-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.gang-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 20px rgba(59,130,246,.1)}
+.gang-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.gang-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--danger),var(--warning));opacity:0;transition:opacity .2s}
+.gang-card:hover::before,.gang-card.active::before{opacity:1}
+.gang-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.gang-id{font-size:14px;font-weight:700;color:var(--text-primary)}
+.gang-size{font-size:11px;color:var(--text-muted);background:var(--bg-input);padding:2px 8px;border-radius:10px}
+.gang-stats{display:flex;gap:16px;margin-bottom:6px}
+.gang-stat{font-size:11px;color:var(--text-secondary)}
+.gang-stat span{font-weight:700;color:var(--danger)}
+.gang-ips{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== Graph area ===== */
+.graph-wrapper{display:grid;grid-template-columns:1fr 300px;gap:16px}
+.graph-chart{height:500px;border-radius:var(--radius);overflow:hidden}
+.graph-sidebar{display:flex;flex-direction:column;gap:12px;max-height:500px;overflow-y:auto}
+
+/* ===== Metrics ===== */
+.metrics-table{width:100%;border-collapse:collapse;margin-bottom:20px}
+.metrics-table th,.metrics-table td{padding:10px 14px;text-align:center;font-size:12px;border-bottom:1px solid rgba(30,45,66,.5)}
+.metrics-table th{background:var(--bg-table-head);color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.metrics-table td{color:var(--text-secondary)}
+.metrics-table td.best{color:var(--accent-light);font-weight:700}
+.metrics-table td:first-child{text-align:left;color:var(--text-primary);font-weight:600}
+.metrics-table tbody tr:hover{background:var(--bg-card-hover)}
+.charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.chart-box{height:340px}
+
+/* ===== Upload ===== */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim)}
+.upload-zone svg{margin-bottom:12px;opacity:.4}
+.upload-zone p{color:var(--text-muted);font-size:13px}
+.upload-zone .hint{font-size:11px;margin-top:6px;color:var(--text-muted)}
+.upload-result{margin-top:16px}
+
+/* ===== Misc ===== */
+.empty{text-align:center;padding:48px;color:var(--text-muted);font-size:13px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.mb-16{margin-bottom:16px}
+.btn{padding:7px 16px;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent-light);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.btn:hover{background:var(--accent);color:#fff}
+.btn-sm{padding:4px 10px;font-size:11px}
+@media(max-width:1200px){.stats-row{grid-template-columns:repeat(2,1fr)}.charts-row{grid-template-columns:1fr}.graph-wrapper{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="header">
-    <h1>GE-MRGNN 网络安全团伙检测系统</h1>
-    <div class="status">
-      <span class="badge" :class="{warn:!loaded}">{{ loaded ? '模型已加载' : '未连接' }}</span>
-      <span class="badge" v-if="loaded">节点 {{ stats.num_nodes }}</span>
-      <span class="badge" v-if="loaded">边 {{ stats.num_edges }}</span>
-    </div>
-  </div>
-
-  <div class="main">
-    <!-- 统计概览 -->
-    <div class="card full-width">
-      <div class="card-header">概览统计</div>
-      <div class="card-body">
-        <div class="stats-grid">
-          <div class="stat-item"><div class="value">{{ stats.num_nodes || 0 }}</div><div class="label">总节点数</div></div>
-          <div class="stat-item"><div class="value">{{ stats.num_edges || 0 }}</div><div class="label">总边数</div></div>
-          <div class="stat-item danger"><div class="value">{{ stats.num_malicious || 0 }}</div><div class="label">恶意节点</div></div>
-          <div class="stat-item warning"><div class="value">{{ stats.num_gangs || 0 }}</div><div class="label">团伙数量</div></div>
-        </div>
+  <div class="layout">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div><div class="title">GE-MRGNN</div><div class="sub">网络安全团伙检测系统</div></div>
       </div>
-    </div>
-
-    <!-- 恶意节点列表 -->
-    <div class="card">
-      <div class="card-header">
-        恶意节点告警
-        <span style="margin-left:auto;font-size:12px;color:#78909c">Top {{ nodes.length }}</span>
-      </div>
-      <div class="card-body node-list">
-        <table>
-          <thead><tr><th>节点ID</th><th>IP</th><th>恶意概率</th><th>状态</th></tr></thead>
-          <tbody>
-            <tr v-for="n in nodes" :key="n.node_id">
-              <td>{{ n.node_id }}</td>
-              <td>{{ n.ip }}</td>
-              <td>
-                <div class="prob-bar"><div class="fill" :style="{width: (n.probability*100)+'%', background: n.probability>0.7?'#ef5350':n.probability>0.5?'#ffb74d':'#66bb6a'}"></div></div>
-                {{ (n.probability*100).toFixed(1) }}%
-              </td>
-              <td><span class="tag" :class="n.is_malicious?'mal':'safe'">{{ n.is_malicious?'恶意':'正常' }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 团伙子图 -->
-    <div class="card">
-      <div class="card-header">团伙子图检测 <span style="margin-left:auto;font-size:12px;color:#78909c">共 {{ gangs.length }} 个</span></div>
-      <div class="card-body node-list">
-        <div v-for="(g,i) in gangs" :key="i" class="gang-card" @click="showGang(g)">
-          <div class="title">团伙 #{{ i+1 }} ({{ g.size }} 节点, {{ g.edges.length }} 边)</div>
-          <div class="meta">恶意节点: {{ g.num_malicious }} | 核心IP: {{ Object.values(g.node_labels||{}).slice(0,3).join(', ') }}</div>
-        </div>
-        <div v-if="gangs.length===0" class="loading">暂无团伙数据</div>
-      </div>
-    </div>
-
-    <!-- 图可视化 -->
-    <div class="card full-width">
-      <div class="card-header">团伙图谱可视化 <span v-if="selectedGang" style="margin-left:8px;font-size:12px;color:#78909c">团伙 {{ selectedGang.size }} 节点</span></div>
-      <div class="card-body">
-        <div id="graph-container">
-          <canvas id="graph-canvas"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- 模型对比指标 -->
-    <div class="card full-width">
-      <div class="card-header">模型评估指标对比</div>
-      <div class="card-body">
-        <div class="metrics-grid">
-          <div v-for="(m,name) in metricsData" :key="name" class="metric-card">
-            <div class="model-name">{{ name }}</div>
-            <div class="metric-row" v-for="(v,k) in m" :key="k"><span>{{ k }}</span><span class="val">{{ typeof v==='number'? v.toFixed(4):v }}</span></div>
+      <nav class="sidebar-nav">
+        <div class="nav-group">
+          <div class="nav-group-label">监控中心</div>
+          <div class="nav-item" :class="{active:page==='overview'}" @click="page='overview'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            系统概览
+          </div>
+          <div class="nav-item" :class="{active:page==='alerts'}" @click="page='alerts'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            威胁告警
+            <span class="nav-badge danger" v-if="stats.num_malicious">{{ stats.num_malicious }}</span>
+          </div>
+          <div class="nav-item" :class="{active:page==='gangs'}" @click="page='gangs'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            团伙图谱
+            <span class="nav-badge warn" v-if="stats.num_gangs">{{ stats.num_gangs }}</span>
           </div>
         </div>
-        <div v-if="Object.keys(metricsData).length===0" class="loading">暂无指标数据</div>
+        <div class="nav-group">
+          <div class="nav-group-label">分析评估</div>
+          <div class="nav-item" :class="{active:page==='metrics'}" @click="page='metrics'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            模型评估
+          </div>
+          <div class="nav-item" :class="{active:page==='upload'}" @click="page='upload'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            数据推理
+          </div>
+        </div>
+      </nav>
+      <div style="padding:12px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted)">
+        v1.0 &middot; PyTorch + FastAPI
       </div>
-    </div>
+    </aside>
 
-    <!-- ROC/PR 曲线 -->
-    <div class="card">
-      <div class="card-header">ROC 曲线</div>
-      <div class="card-body"><div id="roc-chart" class="chart-container"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-header">PR 曲线</div>
-      <div class="card-body"><div id="pr-chart" class="chart-container"></div></div>
+    <!-- ===== Main ===== -->
+    <div class="main-area">
+      <header class="topbar">
+        <div class="page-title">{{ pageTitles[page] }}</div>
+        <div class="topbar-right">
+          <div class="topbar-info"><span class="status-dot" :class="loaded?'on':'off'"></span>{{ loaded?'模型在线':'未连接' }}</div>
+          <div class="topbar-info" v-if="loaded">{{ fmtNum(stats.num_nodes) }} 节点 &middot; {{ fmtNum(stats.num_edges) }} 边</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- ========== OVERVIEW ========== -->
+        <template v-if="page==='overview'">
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="stat-info"><div class="label">总节点数</div><div class="value blue">{{ fmtNum(stats.num_nodes||0) }}</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+              <div class="stat-info"><div class="label">总边数</div><div class="value green">{{ fmtNum(stats.num_edges||0) }}</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+              <div class="stat-info"><div class="label">恶意节点</div><div class="value red">{{ fmtNum(stats.num_malicious||0) }}</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon yellow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+              <div class="stat-info"><div class="label">检测团伙</div><div class="value yellow">{{ fmtNum(stats.num_gangs||0) }}</div></div>
+            </div>
+          </div>
+          <div class="grid-2 mb-16">
+            <div class="card"><div class="card-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>ROC 曲线对比<span class="extra">各模型性能</span></div><div class="card-body"><div id="ov-roc" class="chart-box" style="height:300px"></div></div></div>
+            <div class="card"><div class="card-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>PR 曲线对比<span class="extra">精确率-召回率</span></div><div class="card-body"><div id="ov-pr" class="chart-box" style="height:300px"></div></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>模型指标速览</div>
+            <div class="card-body" style="overflow-x:auto">
+              <table class="metrics-table" v-if="metricsArr.length">
+                <thead><tr><th>模型</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead>
+                <tbody><tr v-for="m in metricsArr" :key="m.name">
+                  <td>{{ nameMap[m.name]||m.name }}</td>
+                  <td :class="{best:m.best_acc}">{{ m.test_acc?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_prec}">{{ m.precision?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_rec}">{{ m.recall?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_f1}">{{ m.f1?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_roc}">{{ m.roc_auc?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_pr}">{{ m.pr_auc?.toFixed(4)||'-' }}</td>
+                </tr></tbody>
+              </table>
+              <div v-else class="empty">暂无指标数据</div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ========== ALERTS ========== -->
+        <template v-if="page==='alerts'">
+          <div class="card">
+            <div class="card-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+              节点威胁列表
+              <span class="extra">共 {{ nodeTotal }} 条记录</span>
+            </div>
+            <div class="card-body">
+              <div class="table-toolbar">
+                <div class="search-box">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input v-model="searchQuery" placeholder="搜索节点ID或IP..." @input="onSearch">
+                </div>
+                <button class="filter-btn" :class="{active:malOnly}" @click="malOnly=!malOnly;fetchNodes()">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  仅恶意
+                </button>
+                <button class="filter-btn" :class="{active:sortAsc}" @click="sortAsc=!sortAsc;fetchNodes()">
+                  {{ sortAsc?'概率升序':'概率降序' }}
+                </button>
+              </div>
+              <div style="max-height:500px;overflow-y:auto">
+                <table class="data-table">
+                  <thead><tr><th style="width:70px">ID</th><th>IP地址</th><th>恶意概率</th><th style="width:80px">威胁等级</th></tr></thead>
+                  <tbody>
+                    <tr v-for="n in nodes" :key="n.node_id" :class="{selected:selectedNode&&selectedNode.node_id===n.node_id}" @click="selectNode(n)">
+                      <td style="font-weight:600;color:var(--text-primary)">#{{ n.node_id }}</td>
+                      <td><code style="font-size:12px;color:var(--accent-light)">{{ n.ip }}</code></td>
+                      <td><div class="prob-cell"><div class="prob-bar"><div class="fill" :style="{width:(n.probability*100)+'%',background:probColor(n.probability)}"></div></div><span class="prob-val" :style="{color:probColor(n.probability)}">{{ (n.probability*100).toFixed(1) }}%</span></div></td>
+                      <td><span class="tag" :class="n.probability>0.7?'danger':n.probability>0.5?'warn':'safe'">{{ n.probability>0.7?'高危':n.probability>0.5?'可疑':'正常' }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="pager">
+                <span>第 {{ nodePage }} / {{ Math.ceil(nodeTotal/nodeSize)||1 }} 页，共 {{ nodeTotal }} 条</span>
+                <div class="pager-btns">
+                  <button class="pager-btn" :disabled="nodePage<=1" @click="nodePage--;fetchNodes()">上一页</button>
+                  <button class="pager-btn" :disabled="nodePage>=Math.ceil(nodeTotal/nodeSize)" @click="nodePage++;fetchNodes()">下一页</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Detail Drawer -->
+          <div class="drawer-mask" :class="{open:!!selectedNode}" @click="selectedNode=null"></div>
+          <div class="drawer" :class="{open:!!selectedNode}">
+            <div class="drawer-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span class="title">节点详情</span>
+              <button class="drawer-close" @click="selectedNode=null">&times;</button>
+            </div>
+            <div class="drawer-body" v-if="selectedNode">
+              <div class="detail-row"><span class="k">节点 ID</span><span class="v">#{{ selectedNode.node_id }}</span></div>
+              <div class="detail-row"><span class="k">IP 地址</span><span class="v" style="color:var(--accent-light)">{{ selectedNode.ip }}</span></div>
+              <div class="detail-row"><span class="k">恶意概率</span><span class="v" :style="{color:probColor(selectedNode.probability)}">{{ (selectedNode.probability*100).toFixed(2) }}%</span></div>
+              <div class="detail-row"><span class="k">威胁等级</span><span class="v"><span class="tag" :class="selectedNode.probability>0.7?'danger':selectedNode.probability>0.5?'warn':'safe'">{{ selectedNode.probability>0.7?'高危':selectedNode.probability>0.5?'可疑':'正常' }}</span></span></div>
+              <div class="detail-row"><span class="k">判定结果</span><span class="v">{{ selectedNode.is_malicious?'恶意节点':'正常节点' }}</span></div>
+              <div style="margin-top:24px">
+                <div id="node-gauge" style="height:180px"></div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ========== GANGS ========== -->
+        <template v-if="page==='gangs'">
+          <div class="gangs-grid mb-16">
+            <div v-for="(g,i) in gangs" :key="i" class="gang-card" :class="{active:selectedGangIdx===i}" @click="selectGang(i)">
+              <div class="gang-head">
+                <span class="gang-id">团伙 #{{ i+1 }}</span>
+                <span class="gang-size">{{ g.size }} 节点</span>
+              </div>
+              <div class="gang-stats">
+                <div class="gang-stat">恶意 <span>{{ g.num_malicious }}</span></div>
+                <div class="gang-stat">边数 <span style="color:var(--accent-light)">{{ g.edges?.length||0 }}</span></div>
+                <div class="gang-stat">密度 <span style="color:var(--purple)">{{ gangDensity(g) }}</span></div>
+              </div>
+              <div class="gang-ips">{{ Object.values(g.node_labels||{}).slice(0,4).join(' / ') }}</div>
+            </div>
+            <div v-if="gangs.length===0" class="empty" style="grid-column:1/-1">暂无团伙数据</div>
+          </div>
+          <div class="card" v-if="gangs.length">
+            <div class="card-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4m-8.66-5.66l2.83-2.83m11.31-5.66l2.83-2.83M1 12h4m14 0h4m-5.66 8.66l-2.83-2.83M6.34 6.34L3.51 3.51"/></svg>
+              团伙关系图谱
+              <span class="extra" v-if="selectedGangIdx>=0">团伙 #{{ selectedGangIdx+1 }} &middot; {{ gangs[selectedGangIdx]?.size }} 节点</span>
+            </div>
+            <div class="card-body"><div id="gang-graph" class="graph-chart"></div></div>
+          </div>
+        </template>
+
+        <!-- ========== METRICS ========== -->
+        <template v-if="page==='metrics'">
+          <div class="card mb-16">
+            <div class="card-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>模型性能对比<span class="extra">全部模型指标</span></div>
+            <div class="card-body" style="overflow-x:auto">
+              <table class="metrics-table" v-if="metricsArr.length">
+                <thead><tr><th>模型</th><th>Train Acc</th><th>Val Acc</th><th>Test Acc</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead>
+                <tbody><tr v-for="m in metricsArr" :key="m.name">
+                  <td>{{ nameMap[m.name]||m.name }}</td>
+                  <td>{{ m.train_acc?.toFixed(4)||'-' }}</td>
+                  <td>{{ m.val_acc?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_acc}">{{ m.test_acc?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_prec}">{{ m.precision?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_rec}">{{ m.recall?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_f1}">{{ m.f1?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_roc}">{{ m.roc_auc?.toFixed(4)||'-' }}</td>
+                  <td :class="{best:m.best_pr}">{{ m.pr_auc?.toFixed(4)||'-' }}</td>
+                </tr></tbody>
+              </table>
+              <div v-else class="empty">暂无指标数据</div>
+            </div>
+          </div>
+          <div class="charts-row mb-16">
+            <div class="card"><div class="card-header">ROC 曲线</div><div class="card-body"><div id="m-roc" class="chart-box"></div></div></div>
+            <div class="card"><div class="card-header">PR 曲线</div><div class="card-body"><div id="m-pr" class="chart-box"></div></div></div>
+            <div class="card"><div class="card-header">雷达图对比</div><div class="card-body"><div id="m-radar" class="chart-box"></div></div></div>
+          </div>
+        </template>
+
+        <!-- ========== UPLOAD ========== -->
+        <template v-if="page==='upload'">
+          <div class="card">
+            <div class="card-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传数据进行推理<span class="extra">支持 .pt 或 CSV 格式</span></div>
+            <div class="card-body">
+              <div class="upload-zone" :class="{dragover:isDragging}" @dragover.prevent="isDragging=true" @dragleave="isDragging=false" @drop.prevent="onDrop" @click="$refs.fileInput.click()">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>拖拽文件到此处，或点击选择文件</p>
+                <div class="hint">支持 features.pt + edge_index.pt + edge_type.pt</div>
+                <div style="margin-top:8px;font-size:11px;color:var(--text-muted)" v-if="uploadFiles.length">已选: {{ uploadFiles.map(f=>f.name).join(', ') }}</div>
+              </div>
+              <input ref="fileInput" type="file" multiple accept=".pt,.csv" style="display:none" @change="onFileSelect">
+              <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+                <label style="font-size:12px;color:var(--text-muted)">阈值:</label>
+                <input v-model.number="uploadThreshold" type="range" min="0" max="1" step="0.05" style="flex:1;max-width:200px;accent-color:var(--accent)">
+                <span style="font-size:12px;color:var(--accent-light);min-width:40px">{{ uploadThreshold.toFixed(2) }}</span>
+                <button class="btn" @click="doUpload" :disabled="!uploadFiles.length||uploading" style="margin-left:auto">{{ uploading?'推理中...':'开始推理' }}</button>
+              </div>
+              <div class="upload-result" v-if="uploadResult">
+                <div class="stats-row" style="margin-top:16px">
+                  <div class="stat-card"><div class="stat-icon blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg></div><div class="stat-info"><div class="label">节点</div><div class="value blue">{{ uploadResult.num_nodes }}</div></div></div>
+                  <div class="stat-card"><div class="stat-icon green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="stat-info"><div class="label">边</div><div class="value green">{{ uploadResult.num_edges }}</div></div></div>
+                  <div class="stat-card"><div class="stat-icon red"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div><div class="stat-info"><div class="label">恶意</div><div class="value red">{{ uploadResult.num_malicious }}</div></div></div>
+                  <div class="stat-card"><div class="stat-icon yellow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="stat-info"><div class="label">团伙</div><div class="value yellow">{{ uploadResult.num_gangs }}</div></div></div>
+                </div>
+                <div style="margin-top:12px;max-height:300px;overflow-y:auto">
+                  <table class="data-table"><thead><tr><th>ID</th><th>概率</th><th>状态</th></tr></thead>
+                  <tbody><tr v-for="n in uploadResult.top_nodes" :key="n.node_id"><td>#{{ n.node_id }}</td><td :style="{color:probColor(n.probability)}">{{ (n.probability*100).toFixed(1) }}%</td><td><span class="tag" :class="n.is_malicious?'danger':'safe'">{{ n.is_malicious?'恶意':'正常' }}</span></td></tr></tbody></table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 const API = window.location.origin;
-const {createApp, ref, onMounted, nextTick} = Vue;
+const {createApp,ref,reactive,computed,onMounted,nextTick,watch} = Vue;
 
 createApp({
-  setup() {
+  setup(){
+    const page = ref('overview');
     const loaded = ref(false);
     const stats = ref({});
     const nodes = ref([]);
     const gangs = ref([]);
     const metricsData = ref({});
-    const selectedGang = ref(null);
+    const curvesData = ref({});
+    const selectedNode = ref(null);
+    const selectedGangIdx = ref(0);
+    const searchQuery = ref('');
+    const malOnly = ref(false);
+    const sortAsc = ref(false);
+    const nodePage = ref(1);
+    const nodeSize = 50;
+    const nodeTotal = ref(0);
+    const isDragging = ref(false);
+    const uploadFiles = ref([]);
+    const uploadThreshold = ref(0.5);
+    const uploading = ref(false);
+    const uploadResult = ref(null);
+    let searchTimer = null;
 
-    async function fetchJSON(url) {
-      try { const r = await fetch(API + url); return await r.json(); } catch(e) { return null; }
+    const pageTitles = {'overview':'系统概览','alerts':'威胁告警','gangs':'团伙图谱','metrics':'模型评估','upload':'数据推理'};
+    const nameMap = {'ge-mrgcn':'GE-MRGNN','gcn':'GCN','rgcn':'RGCN','han':'HAN','dgi':'DGI','gat':'GAT'};
+    const COLORS = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#06b6d4','#f97316','#ec4899'];
+
+    function fmtNum(n){if(!n)return '0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+    function probColor(p){return p>0.7?'#ef4444':p>0.5?'#f59e0b':'#10b981'}
+    function gangDensity(g){const n=g.size;const e=g.edges?.length||0;const maxE=n*(n-1)/2;return maxE>0?(e/maxE*100).toFixed(1)+'%':'0%'}
+
+    async function fetchJSON(url){try{const r=await fetch(API+url);if(!r.ok)return null;return await r.json()}catch(e){return null}}
+
+    async function loadStatus(){
+      const s=await fetchJSON('/api/status');
+      if(s&&s.loaded){loaded.value=true;stats.value=s}
     }
-
-    async function load() {
-      const s = await fetchJSON('/api/status');
-      if (s && s.loaded) {
-        loaded.value = true;
-        stats.value = s;
-        const nd = await fetchJSON('/api/nodes?page=1&page_size=100&malicious_only=true&sort_by=prob_desc');
-        if (nd) nodes.value = nd.nodes;
-        const gd = await fetchJSON('/api/gangs?top_k=20');
-        if (gd) gangs.value = gd.gangs;
-        const md = await fetchJSON('/api/metrics');
-        if (md) metricsData.value = md.metrics;
-      }
+    async function fetchNodes(){
+      const sort=sortAsc.value?'prob_asc':'prob_desc';
+      const url=`/api/nodes?page=${nodePage.value}&page_size=${nodeSize}&sort_by=${sort}&malicious_only=${malOnly.value}&min_prob=0`;
+      const d=await fetchJSON(url);
+      if(d){nodes.value=d.nodes;nodeTotal.value=d.total}
     }
+    async function loadGangs(){const d=await fetchJSON('/api/gangs?top_k=30');if(d)gangs.value=d.gangs}
+    async function loadMetrics(){const d=await fetchJSON('/api/metrics');if(d)metricsData.value=d.metrics}
+    async function loadCurves(){const d=await fetchJSON('/api/curves');if(d)curvesData.value=d.curves||{}}
 
-    function drawGraph(gang) {
-      const canvas = document.getElementById('graph-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const container = document.getElementById('graph-container');
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-      const W = canvas.width, H = canvas.height;
-      ctx.clearRect(0,0,W,H);
+    function onSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{nodePage.value=1;fetchNodes()},300)}
+    function selectNode(n){selectedNode.value=n;nextTick(()=>drawGauge(n))}
 
-      if (!gang || !gang.nodes || gang.nodes.length === 0) {
-        ctx.fillStyle = '#78909c';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('点击左侧团伙卡片查看图谱', W/2, H/2);
-        return;
-      }
-
-      const probs = gang.node_probs || {};
-      const labels = gang.node_labels || {};
-      const allNodes = gang.nodes.slice();
-      // 按恶意概率排序，取 Top 30 核心节点
-      allNodes.sort((a,b) => (probs[String(b)]||0) - (probs[String(a)]||0));
-      const MAX_SHOW = 30;
-      const showNodes = allNodes.slice(0, MAX_SHOW);
-      const showSet = new Set(showNodes);
-      // 只保留两端都在展示集内的边
-      const showEdges = (gang.edges||[]).filter(([s,d]) => showSet.has(s) && showSet.has(d));
-
-      // 构建邻接度（用于节点大小）
-      const deg = {};
-      showNodes.forEach(n => deg[n] = 0);
-      showEdges.forEach(([s,d]) => { deg[s]=(deg[s]||0)+1; deg[d]=(deg[d]||0)+1; });
-
-      // 力导向布局：初始化随机位置，迭代排斥+弹簧
-      const pos = {};
-      const vel = {};
-      const n = showNodes.length;
-      showNodes.forEach((id, i) => {
-        const angle = (2*Math.PI*i)/n + (Math.random()-0.5)*0.3;
-        const r = Math.min(W,H)*0.25 + Math.random()*40;
-        pos[id] = { x: W/2 + r*Math.cos(angle), y: H/2 + r*Math.sin(angle) };
-        vel[id] = { x:0, y:0 };
-      });
-      // 边集合快速查找
-      const edgeSet = new Set(showEdges.map(([s,d])=>s+','+d));
-      const linked = (a,b) => edgeSet.has(a+','+b) || edgeSet.has(b+','+a);
-      // 迭代
-      for (let iter=0; iter<120; iter++) {
-        const temp = Math.max(0.01, 1 - iter/120);
-        for (let i=0;i<n;i++) {
-          const a = showNodes[i];
-          for (let j=i+1;j<n;j++) {
-            const b = showNodes[j];
-            let dx = pos[b].x-pos[a].x, dy = pos[b].y-pos[a].y;
-            let dist = Math.sqrt(dx*dx+dy*dy)||1;
-            // 排斥力
-            const repulse = 3000/(dist*dist);
-            const fx = dx/dist*repulse, fy = dy/dist*repulse;
-            vel[a].x -= fx*temp; vel[a].y -= fy*temp;
-            vel[b].x += fx*temp; vel[b].y += fy*temp;
-            // 弹簧力（有边的节点）
-            if (linked(a,b)) {
-              const attract = (dist-80)*0.005;
-              const ax2 = dx/dist*attract, ay2 = dy/dist*attract;
-              vel[a].x += ax2*temp; vel[a].y += ay2*temp;
-              vel[b].x -= ax2*temp; vel[b].y -= ay2*temp;
-            }
-          }
-          // 向中心的引力
-          vel[a].x += (W/2-pos[a].x)*0.0005;
-          vel[a].y += (H/2-pos[a].y)*0.0005;
-        }
-        showNodes.forEach(id => {
-          pos[id].x += vel[id].x; pos[id].y += vel[id].y;
-          vel[id].x *= 0.8; vel[id].y *= 0.8;
-          // 边界约束
-          pos[id].x = Math.max(40, Math.min(W-40, pos[id].x));
-          pos[id].y = Math.max(40, Math.min(H-40, pos[id].y));
-        });
-      }
-
-      // 画边（半透明）
-      ctx.lineWidth = 0.5;
-      showEdges.forEach(([s,d]) => {
-        if (!pos[s]||!pos[d]) return;
-        ctx.strokeStyle = 'rgba(77,133,180,0.3)';
-        ctx.beginPath();
-        ctx.moveTo(pos[s].x, pos[s].y);
-        ctx.lineTo(pos[d].x, pos[d].y);
-        ctx.stroke();
-      });
-
-      // 画节点
-      showNodes.forEach(id => {
-        const p = pos[id];
-        const prob = probs[String(id)] || 0;
-        const isMal = prob > 0.5;
-        const d = deg[id]||0;
-        const radius = isMal ? Math.min(5+d*0.8, 16) : Math.min(3+d*0.4, 8);
-
-        // 发光效果（高危节点）
-        if (prob > 0.7) {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, radius+4, 0, 2*Math.PI);
-          ctx.fillStyle = 'rgba(239,83,80,0.15)';
-          ctx.fill();
-        }
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, radius, 0, 2*Math.PI);
-        // 颜色按概率渐变
-        if (prob > 0.7) ctx.fillStyle = '#ef5350';
-        else if (prob > 0.5) ctx.fillStyle = '#ffb74d';
-        else ctx.fillStyle = '#66bb6a';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-
-        // 只标注 Top 10 或高危节点
-        if (prob > 0.6 || d >= 3) {
-          const label = labels[String(id)] || String(id);
-          const short = label.length>12 ? label.slice(0,12)+'..' : label;
-          ctx.fillStyle = '#cfd8dc';
-          ctx.font = '9px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(short, p.x, p.y - radius - 3);
-        }
-      });
-
-      // 图例
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left';
-      const legendY = 20;
-      [[12,'#ef5350','高危 >70%'],[12,'#ffb74d','可疑 50-70%'],[12,'#66bb6a','正常 <50%']].forEach(([r,c,t],i) => {
-        const lx = 16, ly = legendY + i*20;
-        ctx.beginPath(); ctx.arc(lx,ly,5,0,2*Math.PI); ctx.fillStyle=c; ctx.fill();
-        ctx.fillStyle='#aaa'; ctx.fillText(t, lx+12, ly+4);
-      });
-      if (allNodes.length > MAX_SHOW) {
-        ctx.fillStyle='#78909c'; ctx.font='11px sans-serif'; ctx.textAlign='right';
-        ctx.fillText(`显示 Top ${MAX_SHOW}/${allNodes.length} 核心节点`, W-16, H-12);
-      }
-    }
-
-    function showGang(g) {
-      selectedGang.value = g;
-      nextTick(() => drawGraph(g));
-    }
-
-    const COLORS = ['#4fc3f7','#ef5350','#66bb6a','#ffb74d','#ab47bc','#26c6da','#ff7043'];
-    const NAME_MAP = {'ge-mrgcn':'GE-MRGNN','gcn':'GCN','rgcn':'RGCN','han':'HAN','dgi':'DGI','gat':'GAT'};
-
-    function drawROC(curves) {
-      const dom = document.getElementById('roc-chart');
-      if (!dom || typeof echarts === 'undefined') return;
-      const chart = echarts.init(dom, 'dark');
-      const series = [];
-      let i = 0;
-      for (const [name, c] of Object.entries(curves)) {
-        if (!c.roc) continue;
-        // 按 FPR 升序排序，确保曲线从左到右绘制
-        const pairs = c.roc.fpr.map((f, idx) => [f, c.roc.tpr[idx]]);
-        pairs.sort((a,b) => a[0]-b[0]);
-        const displayName = NAME_MAP[name] || name;
-        series.push({ name:displayName, type:'line', data:pairs, smooth:false, symbol:'none', lineStyle:{width:2, color:COLORS[i%COLORS.length]} });
-        i++;
-      }
-      series.push({ name:'随机基线', type:'line', data:[[0,0],[1,1]], lineStyle:{type:'dashed', color:'#555', width:1}, symbol:'none' });
-      chart.setOption({
-        backgroundColor:'transparent',
-        tooltip:{ trigger:'axis', formatter:p=>p.map(s=>s.seriesName+': TPR='+s.data[1].toFixed(3)).join('<br>') },
-        legend:{ bottom:0, textStyle:{color:'#bbb',fontSize:11}, itemWidth:16, itemHeight:8 },
-        grid:{ left:55, right:15, top:30, bottom:45 },
-        xAxis:{ name:'假阳性率 (FPR)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
-        yAxis:{ name:'真阳性率 (TPR)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
-        series
-      });
-    }
-
-    function drawPR(curves) {
-      const dom = document.getElementById('pr-chart');
-      if (!dom || typeof echarts === 'undefined') return;
-      const chart = echarts.init(dom, 'dark');
-      const series = [];
-      let i = 0;
-      for (const [name, c] of Object.entries(curves)) {
-        if (!c.pr) continue;
-        // 按 Recall 升序排序
-        const pairs = c.pr.recall.map((r, idx) => [r, c.pr.precision[idx]]);
-        pairs.sort((a,b) => a[0]-b[0]);
-        const displayName = NAME_MAP[name] || name;
-        series.push({ name:displayName, type:'line', data:pairs, smooth:false, symbol:'none', lineStyle:{width:2, color:COLORS[i%COLORS.length]} });
-        i++;
-      }
-      chart.setOption({
-        backgroundColor:'transparent',
-        tooltip:{ trigger:'axis', formatter:p=>p.map(s=>s.seriesName+': P='+s.data[1].toFixed(3)).join('<br>') },
-        legend:{ bottom:0, textStyle:{color:'#bbb',fontSize:11}, itemWidth:16, itemHeight:8 },
-        grid:{ left:55, right:15, top:30, bottom:45 },
-        xAxis:{ name:'召回率 (Recall)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
-        yAxis:{ name:'精确率 (Precision)', type:'value', min:0, max:1, nameLocation:'end', nameTextStyle:{color:'#aaa',fontSize:12}, axisLine:{lineStyle:{color:'#444'}}, splitLine:{lineStyle:{color:'#1e2d3d'}} },
-        series
-      });
-    }
-
-    onMounted(async () => {
-      await load();
-      // 加载曲线数据
-      const cd = await fetchJSON('/api/curves');
-      if (cd && cd.curves) {
-        nextTick(() => { drawROC(cd.curves); drawPR(cd.curves); });
-      }
-      nextTick(() => drawGraph(null));
-      setInterval(load, 30000);
+    const metricsArr = computed(()=>{
+      const arr=[];const data=metricsData.value;
+      for(const[name,m]of Object.entries(data)){arr.push({name,...m})}
+      const fields=[['test_acc','best_acc'],['precision','best_prec'],['recall','best_rec'],['f1','best_f1'],['roc_auc','best_roc'],['pr_auc','best_pr']];
+      fields.forEach(([f,bf])=>{let mx=-1;arr.forEach(m=>{if((m[f]||0)>mx)mx=m[f]||0});arr.forEach(m=>{m[bf]=(m[f]||0)>=mx&&mx>0})});
+      return arr;
     });
 
-    return { loaded, stats, nodes, gangs, metricsData, selectedGang, showGang };
+    // ===== Charts =====
+    function chartTheme(){return{backgroundColor:'transparent',textStyle:{color:'#8899aa',fontSize:11},legend:{textStyle:{color:'#8899aa',fontSize:11},itemWidth:14,itemHeight:8,bottom:0},grid:{left:50,right:15,top:30,bottom:45},xAxis:{axisLine:{lineStyle:{color:'#1e2d42'}},splitLine:{lineStyle:{color:'#131f30'}}},yAxis:{axisLine:{lineStyle:{color:'#1e2d42'}},splitLine:{lineStyle:{color:'#131f30'}}}}}
+
+    function drawROC(domId){
+      const dom=document.getElementById(domId);if(!dom||typeof echarts==='undefined')return;
+      let chart=echarts.getInstanceByDom(dom);if(!chart)chart=echarts.init(dom);
+      const series=[];let i=0;
+      for(const[name,c]of Object.entries(curvesData.value)){
+        if(!c.roc)continue;
+        const pairs=c.roc.fpr.map((f,idx)=>[f,c.roc.tpr[idx]]);pairs.sort((a,b)=>a[0]-b[0]);
+        const dn=nameMap[name]||name;
+        series.push({name:dn,type:'line',data:pairs,smooth:false,symbol:'none',lineStyle:{width:2.5,color:COLORS[i%COLORS.length]},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:COLORS[i%COLORS.length].replace(')',',0.15)')},{offset:1,color:'transparent'}])}});i++}
+      series.push({name:'随机',type:'line',data:[[0,0],[1,1]],lineStyle:{type:'dashed',color:'#333',width:1},symbol:'none'});
+      const t=chartTheme();
+      chart.setOption({...t,tooltip:{trigger:'axis',backgroundColor:'#1a2332',borderColor:'#2d3a4a',textStyle:{color:'#e0e6ed',fontSize:11}},legend:{...t.legend},grid:{...t.grid},xAxis:{...t.xAxis,name:'FPR',type:'value',min:0,max:1,nameTextStyle:{color:'#667'}},yAxis:{...t.yAxis,name:'TPR',type:'value',min:0,max:1,nameTextStyle:{color:'#667'}},series});
+    }
+    function drawPR(domId){
+      const dom=document.getElementById(domId);if(!dom||typeof echarts==='undefined')return;
+      let chart=echarts.getInstanceByDom(dom);if(!chart)chart=echarts.init(dom);
+      const series=[];let i=0;
+      for(const[name,c]of Object.entries(curvesData.value)){
+        if(!c.pr)continue;
+        const pairs=c.pr.recall.map((r,idx)=>[r,c.pr.precision[idx]]);pairs.sort((a,b)=>a[0]-b[0]);
+        const dn=nameMap[name]||name;
+        series.push({name:dn,type:'line',data:pairs,smooth:false,symbol:'none',lineStyle:{width:2.5,color:COLORS[i%COLORS.length]},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:COLORS[i%COLORS.length].replace(')',',0.15)')},{offset:1,color:'transparent'}])}});i++}
+      const t=chartTheme();
+      chart.setOption({...t,tooltip:{trigger:'axis',backgroundColor:'#1a2332',borderColor:'#2d3a4a',textStyle:{color:'#e0e6ed',fontSize:11}},legend:{...t.legend},grid:{...t.grid},xAxis:{...t.xAxis,name:'Recall',type:'value',min:0,max:1,nameTextStyle:{color:'#667'}},yAxis:{...t.yAxis,name:'Precision',type:'value',min:0,max:1,nameTextStyle:{color:'#667'}},series});
+    }
+    function drawRadar(domId){
+      const dom=document.getElementById(domId);if(!dom||typeof echarts==='undefined'||!metricsArr.value.length)return;
+      let chart=echarts.getInstanceByDom(dom);if(!chart)chart=echarts.init(dom);
+      const indicator=[{name:'Accuracy',max:1},{name:'Precision',max:1},{name:'Recall',max:1},{name:'F1',max:1},{name:'ROC-AUC',max:1},{name:'PR-AUC',max:1}];
+      const series=[];
+      metricsArr.value.forEach((m,i)=>{series.push({value:[m.test_acc||0,m.precision||0,m.recall||0,m.f1||0,m.roc_auc||0,m.pr_auc||0],name:nameMap[m.name]||m.name,lineStyle:{color:COLORS[i%COLORS.length],width:2},areaStyle:{color:COLORS[i%COLORS.length].replace(')',',0.08)').replace('rgb','rgba')},itemStyle:{color:COLORS[i%COLORS.length]}})});
+      chart.setOption({backgroundColor:'transparent',legend:{bottom:0,textStyle:{color:'#8899aa',fontSize:11},itemWidth:14,itemHeight:8},radar:{indicator,shape:'polygon',axisName:{color:'#8899aa',fontSize:10},splitArea:{areaStyle:{color:['rgba(59,130,246,0.02)','rgba(59,130,246,0.04)']}},splitLine:{lineStyle:{color:'#1e2d42'}},axisLine:{lineStyle:{color:'#1e2d42'}}},tooltip:{trigger:'item',backgroundColor:'#1a2332',borderColor:'#2d3a4a',textStyle:{color:'#e0e6ed',fontSize:11}},series:[{type:'radar',data:series}]});
+    }
+
+    function drawGangGraph(){
+      const dom=document.getElementById('gang-graph');if(!dom||typeof echarts==='undefined')return;
+      let chart=echarts.getInstanceByDom(dom);if(!chart)chart=echarts.init(dom);
+      const g=gangs.value[selectedGangIdx.value];
+      if(!g){chart.clear();return}
+      const probs=g.node_probs||{};const labels=g.node_labels||{};
+      const ns=g.nodes.slice().sort((a,b)=>(probs[String(b)]||0)-(probs[String(a)]||0));
+      const MAX=60;const show=ns.slice(0,MAX);const showSet=new Set(show);
+      const echartsNodes=show.map(id=>{
+        const p=probs[String(id)]||0;const label=labels[String(id)]||'node_'+id;
+        const cat=p>0.7?0:p>0.5?1:2;
+        return{id:String(id),name:label.length>16?label.slice(0,16)+'..':label,symbolSize:Math.max(8,Math.min(p*40,30)),category:cat,value:p,
+          itemStyle:{color:p>0.7?'#ef4444':p>0.5?'#f59e0b':'#10b981',borderColor:'rgba(255,255,255,0.2)',borderWidth:1},
+          label:{show:p>0.6,fontSize:9,color:'#aab',position:'top'}}});
+      const edges=(g.edges||[]).filter(([s,d])=>showSet.has(s)&&showSet.has(d)).map(([s,d])=>({source:String(s),target:String(d),lineStyle:{color:'rgba(59,130,246,0.2)',width:0.8}}));
+      chart.setOption({backgroundColor:'transparent',tooltip:{trigger:'item',backgroundColor:'#1a2332',borderColor:'#2d3a4a',textStyle:{color:'#e0e6ed',fontSize:11},formatter:p=>{if(p.dataType==='node')return`<b>${p.data.name}</b><br>恶意概率: ${(p.data.value*100).toFixed(1)}%`;return''}},
+        legend:{data:[{name:'高危',icon:'circle'},{name:'可疑',icon:'circle'},{name:'正常',icon:'circle'}],bottom:0,textStyle:{color:'#8899aa',fontSize:11}},
+        series:[{type:'graph',layout:'force',data:echartsNodes,links:edges,roam:true,draggable:true,
+          categories:[{name:'高危',itemStyle:{color:'#ef4444'}},{name:'可疑',itemStyle:{color:'#f59e0b'}},{name:'正常',itemStyle:{color:'#10b981'}}],
+          force:{repulsion:120,gravity:0.05,edgeLength:[40,200],layoutAnimation:true},
+          emphasis:{focus:'adjacency',lineStyle:{width:2,color:'#60a5fa'}},
+          lineStyle:{curveness:0.1}}]},true);
+    }
+
+    function drawGauge(n){
+      const dom=document.getElementById('node-gauge');if(!dom||typeof echarts==='undefined')return;
+      let chart=echarts.getInstanceByDom(dom);if(!chart)chart=echarts.init(dom);
+      const v=n.probability*100;
+      chart.setOption({series:[{type:'gauge',startAngle:200,endAngle:-20,min:0,max:100,
+        axisLine:{lineStyle:{width:12,color:[[0.5,'#10b981'],[0.7,'#f59e0b'],[1,'#ef4444']]}},
+        pointer:{itemStyle:{color:'auto'},width:4,length:'60%'},
+        axisTick:{show:false},splitLine:{show:false},axisLabel:{show:false},
+        detail:{formatter:'{value}%',fontSize:22,fontWeight:700,color:'auto',offsetCenter:[0,'70%']},
+        title:{show:true,offsetCenter:[0,'95%'],fontSize:11,color:'#8899aa'},
+        data:[{value:v.toFixed(1),name:'威胁指数'}]}]});
+    }
+
+    // ===== Upload =====
+    function onDrop(e){isDragging.value=false;uploadFiles.value=Array.from(e.dataTransfer.files)}
+    function onFileSelect(e){uploadFiles.value=Array.from(e.target.files)}
+    async function doUpload(){
+      if(!uploadFiles.value.length)return;uploading.value=true;uploadResult.value=null;
+      try{
+        const form=new FormData();
+        for(const f of uploadFiles.value){
+          form.append('files',f);
+        }
+        const r=await fetch(API+`/api/predict?threshold=${uploadThreshold.value}`,{method:'POST',body:form});
+        const data=await r.json();
+        if(!r.ok){alert('推理失败: '+(data.detail||JSON.stringify(data)));uploading.value=false;return}
+        uploadResult.value=data;
+      }catch(e){console.error(e);alert('请求失败: '+e.message)}
+      uploading.value=false;
+    }
+
+    function selectGang(i){selectedGangIdx.value=i;nextTick(drawGangGraph)}
+
+    // ===== Init =====
+    async function initAll(){
+      await loadStatus();if(!loaded.value)return;
+      await Promise.all([fetchNodes(),loadGangs(),loadMetrics(),loadCurves()]);
+      nextTick(()=>{drawROC('ov-roc');drawPR('ov-pr')});
+    }
+
+    watch(page,()=>{nextTick(()=>{
+      if(page.value==='overview'){drawROC('ov-roc');drawPR('ov-pr')}
+      if(page.value==='gangs'&&gangs.value.length)drawGangGraph();
+      if(page.value==='metrics'){drawROC('m-roc');drawPR('m-pr');drawRadar('m-radar')}
+    })});
+
+    onMounted(async()=>{await initAll();setInterval(loadStatus,30000)});
+
+    return{page,loaded,stats,nodes,gangs,metricsData,curvesData,selectedNode,selectedGangIdx,searchQuery,malOnly,sortAsc,nodePage,nodeSize,nodeTotal,
+      isDragging,uploadFiles,uploadThreshold,uploading,uploadResult,
+      pageTitles,nameMap,metricsArr,
+      fmtNum,probColor,gangDensity,fetchNodes,onSearch,selectNode,selectGang,drawGangGraph,onDrop,onFileSelect,doUpload};
   }
 }).mount('#app');
 </script>

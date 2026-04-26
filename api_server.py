@@ -264,18 +264,13 @@ def create_app():
 
     @app.post("/api/predict")
     async def predict_upload(
-        nodes_file: UploadFile = File(None),
-        edges_file: UploadFile = File(None),
-        pt_features: UploadFile = File(None),
-        pt_edge_index: UploadFile = File(None),
-        pt_edge_type: UploadFile = File(None),
+        files: list[UploadFile] = File(...),
         threshold: float = Query(0.5, ge=0.0, le=1.0),
     ):
         """上传数据进行推理
 
-        支持两种格式:
-        1. CSV: nodes_file (id, feat1, feat2, ...) + edges_file (src, dst, type, weight)
-        2. PT: pt_features + pt_edge_index + pt_edge_type
+        上传 features.pt + edge_index.pt + edge_type.pt 三个文件，
+        系统根据文件名自动识别。
         """
         if not app_state["loaded"]:
             raise HTTPException(400, "模型未加载")
@@ -285,46 +280,44 @@ def create_app():
         model = app_state["model"]
 
         try:
-            if pt_features is not None:
-                # .pt 格式
-                feat_bytes = await pt_features.read()
-                features = torch.load(io.BytesIO(feat_bytes), map_location='cpu')
-                ei_bytes = await pt_edge_index.read()
-                edge_index = torch.load(io.BytesIO(ei_bytes), map_location='cpu')
-                et_bytes = await pt_edge_type.read()
-                edge_type = torch.load(io.BytesIO(et_bytes), map_location='cpu')
-                edge_weight = None
-            elif nodes_file is not None and edges_file is not None:
-                # CSV 格式
-                nodes_content = (await nodes_file.read()).decode('utf-8')
-                reader = csv.reader(io.StringIO(nodes_content))
-                ids = []
-                feats = []
-                for row in reader:
-                    if not row:
-                        continue
-                    ids.append(row[0])
-                    feats.append([float(x) for x in row[1:]])
-                id2idx = {nid: i for i, nid in enumerate(ids)}
-                features = torch.tensor(feats, dtype=torch.float32)
+            # 按文件名分类
+            file_map = {}
+            for f in files:
+                name = (f.filename or '').lower()
+                file_map[name] = f
+                print(f"[predict] 收到文件: {f.filename} ({f.size or '?'} bytes)")
 
-                edges_content = (await edges_file.read()).decode('utf-8')
-                reader = csv.DictReader(io.StringIO(edges_content))
-                src_l, dst_l, type_l, w_l = [], [], [], []
-                for row in reader:
-                    s = id2idx.get(row.get('src', ''))
-                    d = id2idx.get(row.get('dst', ''))
-                    if s is None or d is None:
-                        continue
-                    src_l.append(s)
-                    dst_l.append(d)
-                    type_l.append(int(row.get('type', 0)))
-                    w_l.append(float(row.get('weight', 1.0)))
-                edge_index = torch.tensor([src_l, dst_l], dtype=torch.long)
-                edge_type = torch.tensor(type_l, dtype=torch.long)
-                edge_weight = torch.tensor(w_l, dtype=torch.float32)
+            # 查找 .pt 文件（按文件名关键词匹配）
+            pt_feat = pt_ei = pt_et = None
+            for name, f in file_map.items():
+                if 'feature' in name:
+                    pt_feat = f
+                elif 'edge_index' in name:
+                    pt_ei = f
+                elif 'edge_type' in name:
+                    pt_et = f
+
+            if pt_feat and pt_ei and pt_et:
+                # .pt 格式
+                feat_bytes = await pt_feat.read()
+                features = torch.load(io.BytesIO(feat_bytes), map_location='cpu',
+                                      weights_only=False)
+                ei_bytes = await pt_ei.read()
+                edge_index = torch.load(io.BytesIO(ei_bytes), map_location='cpu',
+                                        weights_only=False)
+                et_bytes = await pt_et.read()
+                edge_type = torch.load(io.BytesIO(et_bytes), map_location='cpu',
+                                       weights_only=False)
+                edge_weight = None
+                print(f"[predict] PT解析成功: features={features.shape}, "
+                      f"edges={edge_index.shape}, types={edge_type.shape}")
             else:
-                raise HTTPException(400, "请上传 nodes+edges CSV 或 .pt 文件")
+                received = [f.filename for f in files]
+                raise HTTPException(
+                    400,
+                    f"需要同时上传 features.pt、edge_index.pt、edge_type.pt 三个文件。"
+                    f"收到的文件: {received}"
+                )
 
             probs = do_predict(model, features, edge_index, edge_type, edge_weight)
             mal_nodes = (probs > threshold).nonzero(as_tuple=True)[0].tolist()
@@ -349,7 +342,11 @@ def create_app():
                 "top_nodes": top_nodes,
                 "gangs": gangs[:10],
             }
+        except HTTPException:
+            raise
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             raise HTTPException(500, f"推理失败: {str(e)}")
 
     return app
