@@ -547,6 +547,7 @@ def main():
     val_ratio = get_arg('--val_ratio', 0.2, float)
     use_amp = '--amp' in args
     dgi_pretrain_epochs = get_arg('--dgi_epochs', 50, int)
+    exclude_rel = get_arg('--exclude_rel', None, int)
 
     if seed is not None:
         set_seed(seed)
@@ -557,6 +558,16 @@ def main():
 
     # 加载数据
     features, edge_index, edge_type, edge_weight, labels_bot, labels_stance = load_dataset(dataset_dir)
+
+    # 关系消融：排除指定关系类型的边
+    if exclude_rel is not None:
+        keep_mask = (edge_type != exclude_rel)
+        removed = (~keep_mask).sum().item()
+        edge_index = edge_index[:, keep_mask]
+        edge_type = edge_type[keep_mask]
+        if edge_weight is not None:
+            edge_weight = edge_weight[keep_mask]
+        print(f"[关系消融] 排除关系类型 {exclude_rel}，移除 {removed} 条边，剩余 {edge_index.size(1)} 条边")
 
     num_nodes = features.size(0)
     if max_edges is not None and edge_index.size(1) > max_edges:

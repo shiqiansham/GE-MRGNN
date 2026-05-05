@@ -82,9 +82,32 @@ def main():
             results.append((f"TrainRatio={int(ratio*100)}%", result))
 
     # ============================================
-    # 消融4: 基线模型对比 (HAN, DGI)
+    # 消融4: 关系消融（逐一去除每种关系类型）
     # ============================================
-    print("\n【消融实验4: 基线模型对比】")
+    print("\n【消融实验4: 关系消融】")
+    rel_names = {
+        0: '关注(Follow)',
+        1: '好友(Friend)',
+        2: '转发(Retweet)',
+        3: '提及(Mention)',
+        4: '回复(Reply)',
+        5: '引用(Quote)',
+        6: '列表(List)',
+    }
+    for rel_id in range(7):
+        label = rel_names.get(rel_id, f'类型{rel_id}')
+        name = f"rel_exclude_{rel_id}_{label.split('(')[0]}"
+        result = run_experiment(
+            name=name, model='rgcn_group', epochs=50,
+            extra_args=['--exclude_rel', str(rel_id)]
+        )
+        if result:
+            results.append((f"去除{label}", result))
+
+    # ============================================
+    # 消融5: 基线模型对比 (HAN, DGI)
+    # ============================================
+    print("\n【消融实验5: 基线模型对比】")
     for model, label in [('han', 'HAN'), ('dgi', 'DGI')]:
         result = run_experiment(name=f"baseline_{label}", model=model, epochs=50)
         if result:
